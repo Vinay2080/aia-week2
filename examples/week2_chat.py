@@ -34,75 +34,88 @@ def parse_args():
         type=str,
         default="http://localhost:8000/v1/chat/completions",
     )
+    parser.add_argument(
+        "--chat",
+        type=str,
+        nargs="*",
+        default=[],
+        help="Conversation messages.",
+    )
+    parser.add_argument(
+        "--system-prompt",
+        type=str,
+        default="",
+        help="Optional system prompt.",
+    )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=0.7,
+    )
+    parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=100,
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
 
-    # -------------------------------------------------
-    # Single-turn conversation
-    # -------------------------------------------------
-    messages = [
-        {
-            "role": "user",
-            "content": "Hello! Tell me about vector databases.",
-        }
-    ]
+    messages = []
 
-    response = post_request(args.addr, messages, 0.7, 100)
-    print_response("Single Turn", response)
+    if args.system_prompt:
+        messages.append(
+            {
+                "role": "system",
+                "content": args.system_prompt,
+            }
+        )
 
-    # -------------------------------------------------
-    # Multi-turn conversation
-    # -------------------------------------------------
-    conversation = [
-        {"role": "user", "content": "Hi"},
-        {"role": "assistant", "content": "Hello!"},
-        {"role": "user", "content": "What did I just say?"},
-    ]
+    if args.chat:
+        for i, text in enumerate(args.chat):
+            role = "user" if i % 2 == 0 else "assistant"
+            messages.append(
+                {
+                    "role": role,
+                    "content": text,
+                }
+            )
+    else:
+        messages.extend(
+            [
+                {
+                    "role": "system",
+                    "content": "You are a helpful RAG assistant.",
+                },
+                {
+                    "role": "user",
+                    "content": "Hi",
+                },
+                {
+                    "role": "assistant",
+                    "content": "Hello!",
+                },
+                {
+                    "role": "user",
+                    "content": "What is your name?",
+                },
+                {
+                    "role": "assistant",
+                    "content": "I'm an AI assistant.",
+                },
+                {
+                    "role": "user",
+                    "content": "Explain embeddings in one sentence.",
+                },
+            ]
+        )
 
-    response = post_request(args.addr, conversation, 0.7, 100)
-    print_response("Multi Turn", response)
-
-    # -------------------------------------------------
-    # System Prompt
-    # -------------------------------------------------
-    system_messages = [
-        {
-            "role": "system",
-            "content": "You are a helpful RAG assistant. Be concise.",
-        },
-        {
-            "role": "user",
-            "content": "Explain embeddings.",
-        },
-    ]
-
-    response = post_request(args.addr, system_messages, 0.7, 100)
-    print_response("System Prompt", response)
-
-    # -------------------------------------------------
-    # Temperature comparison
-    # -------------------------------------------------
-    prompt = [
-        {
-            "role": "user",
-            "content": "Write one sentence about artificial intelligence.",
-        }
-    ]
-
-    response = post_request(args.addr, prompt, 0.0, 100)
-    print_response("Temperature = 0.0", response)
-
-    response = post_request(args.addr, prompt, 1.0, 100)
-    print_response("Temperature = 1.0", response)
-
-    # -------------------------------------------------
-    # max_tokens comparison
-    # -------------------------------------------------
-    response = post_request(args.addr, prompt, 0.7, 20)
-    print_response("max_tokens = 20", response)
-
-    response = post_request(args.addr, prompt, 0.7, 100)
-    print_response("max_tokens = 100", response)
+    response = post_request(
+        args.addr,
+        messages,
+        args.temperature,
+        args.max_tokens,
+    )
+    print_response("Chat", response)
