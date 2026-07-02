@@ -44,6 +44,8 @@ def parse_args():
     parser.add_argument(
         "--system-prompt",
         type=str,
+        nargs="?",
+        const="You are a helpful RAG assistant.",
         default="",
         help="Optional system prompt.",
     )
@@ -63,32 +65,38 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    messages = []
+    base_messages = []
 
     if args.system_prompt:
-        messages.append(
+        base_messages.append(
             {
                 "role": "system",
                 "content": args.system_prompt,
             }
         )
 
+    turns = []
+
     if args.chat:
         for i, text in enumerate(args.chat):
             role = "user" if i % 2 == 0 else "assistant"
-            messages.append(
+            turns.append(
                 {
                     "role": role,
                     "content": text,
                 }
             )
     else:
-        messages.extend(
-            [
+        if not args.system_prompt:
+            base_messages.append(
                 {
                     "role": "system",
                     "content": "You are a helpful RAG assistant.",
-                },
+                }
+            )
+
+        turns.extend(
+            [
                 {
                     "role": "user",
                     "content": "Hi",
@@ -112,10 +120,11 @@ if __name__ == "__main__":
             ]
         )
 
-    response = post_request(
-        args.addr,
-        messages,
-        args.temperature,
-        args.max_tokens,
-    )
-    print_response("Chat", response)
+    for i in range(len(turns)):
+        response = post_request(
+            args.addr,
+            base_messages + turns[: i + 1],
+            args.temperature,
+            args.max_tokens,
+        )
+        print_response(f"Chat turn {i + 1}", response)
